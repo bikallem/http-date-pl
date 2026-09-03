@@ -27,11 +27,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Create a non-root user to match the devcontainer's remoteUser.
 # This mirrors the standard VS Code devcontainer base images.
-RUN groupadd --gid 1000 vscode \
-    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash vscode \
-    && echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
-    && apt-get install -y --no-install-recommends sudo \
+RUN apt-get update && apt-get install -y --no-install-recommends sudo \
     && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
+    && apt-get clean \
+    && groupadd --gid 1000 vscode \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash vscode \
+    && echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 ENV SHELL=/bin/bash
