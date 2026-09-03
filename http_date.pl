@@ -101,4 +101,32 @@ test(imf) :-
     decode("Sun, 06 Nov 1994 08:49:37 GMT", D),
     assertion(D == http_date(imf_fixdate, datetime(sun, date(1994,11,6), time(8,49,37)))).
 
+test(rfc850) :-
+    decode("Sunday, 06-Nov-94 08:49:37 GMT", D),
+    assertion(D == http_date(rfc850, datetime(sun, date(94,11,6), time(8,49,37)))).
+
+test(asctime_padded) :-
+    decode("Sun Nov  6 08:49:37 1994", D),
+    assertion(D == http_date(asctime, datetime(sun, date(1994,11,6), time(8,49,37)))).
+
+test(asctime_two_digit) :-
+    decode("Wed Nov 16 08:49:37 1994", D),
+    assertion(D == http_date(asctime, datetime(wed, date(1994,11,16), time(8,49,37)))).
+
+test(trailing_data, [fail]) :- decode("Sun, 06 Nov 1994 08:49:37 GMTx", _).
+test(garbage, [fail]) :- decode("not a date", _).
+test(hour_out_of_range, [fail]) :- decode("Sun, 06 Nov 1994 25:49:37 GMT", _).
+
+test(rfc850_rejects_four_digit_year, [fail]) :-
+    encode(http_date(rfc850, datetime(sun, date(1994,11,6), time(8,49,37))), _).
+
+test(roundtrip, [forall(member(S, ["Sun, 06 Nov 1994 08:49:37 GMT",
+                                   "Sunday, 06-Nov-94 08:49:37 GMT",
+                                   "Sun Nov  6 08:49:37 1994"]))]) :-
+    decode(S, D), encode(D, S2), assertion(S2 == S).
+
+test(every_day_and_month, [forall((day(Day,_,_), month(M, _)))]) :-
+    Date = http_date(imf_fixdate, datetime(Day, date(1994, M, 6), time(8,49,37))),
+    encode(Date, S), decode(S, Back), assertion(Back == Date).
+
 :- end_tests(http_date).
