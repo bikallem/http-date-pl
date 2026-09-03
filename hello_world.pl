@@ -1,6 +1,11 @@
-#!/usr/bin/env perl
-use strict;
-use warnings;
-use feature 'say';
+#!/usr/bin/env swipl
+% hello_world.pl - simple SWI-Prolog hello world
+%
+% Run with: swipl -s hello_world.pl
+% (the shebang line is treated as a comment by SWI-Prolog)
 
-say "Hello, World!";
+:- initialization(main).
+
+main :-
+    format('Hello, World!~n', []),
+    halt.

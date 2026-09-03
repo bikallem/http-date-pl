@@ -4,33 +4,26 @@ FROM debian:13
 # Avoid interactive frontends during apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install the tools needed for Perl development.
-#   - build-essential: gcc/g++/make for XS modules
-#   - perl + cpanminus: core toolchain and module installer
+# Install the tools needed for SWI-Prolog development.
+#   - swi-prolog-nox: the SWI-Prolog interpreter/development system (headless)
+#   - build-essential: gcc/g++/make for SWI-Prolog foreign (C) extensions
 #   - git: version control
 #   - curl/wget/ca-certificates: fetching dependencies
 #   - procps, vim, less, ripgrep: everyday developer utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ca-certificates \
-    cpanminus \
     curl \
     git \
     less \
     make \
-    perl \
     procps \
     ripgrep \
+    swi-prolog-nox \
     vim \
     wget \
-    && rm -rf /var/lib/apt/list/* \
+    && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
-
-# Basic Perl toolchain inspection / test tools
-RUN cpanm --notest --quiet \
-    Test::More \
-    Test::Harness \
-    || true
 
 # Create a non-root user to match the devcontainer's remoteUser.
 # This mirrors the standard VS Code devcontainer base images.

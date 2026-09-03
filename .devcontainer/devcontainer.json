@@ -1,5 +1,5 @@
 {
-  "name": "http-date-pl (Debian 13)",
+  "name": "http-date-pl SWI-Prolog (Debian 13)",
   "build": {
     "dockerfile": "Dockerfile",
     "context": "."
@@ -10,8 +10,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-vscode.perl",
-        "d9705996.perl-toolbox",
+        "arthurwang.vscode-prolog",
         "eamodio.gitlens"
       ],
       "settings": {
@@ -20,6 +19,6 @@
       }
     }
   },
-  "postCreateCommand": "perl -v && cpanm --version",
+  "postCreateCommand": "swipl --version",
   "mounts": []
 }
