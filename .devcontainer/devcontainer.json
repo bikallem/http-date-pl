@@ -1,0 +1,25 @@
+{
+  "name": "http-date-pl (Debian 13)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "remoteUser": "vscode",
+  "containerUser": "root",
+  "runArgs": [],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.perl",
+        "d9705996.perl-toolbox",
+        "eamodio.gitlens"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "files.eol": "\n"
+      }
+    }
+  },
+  "postCreateCommand": "perl -v && cpanm --version",
+  "mounts": []
+}
