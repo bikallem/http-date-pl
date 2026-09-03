@@ -15,7 +15,6 @@
         default = pkgs.mkShell {
           packages = [
             pkgs.swi-prolog
-            pkgs.rlwrap
           ];
         };
       });
