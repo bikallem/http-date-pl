@@ -80,6 +80,7 @@ http_date(asctime, datetime(Day, date(Y, M, D), Time)) -->
     day_name(Day, short), ` `, month_name(M), ` `, asctime_day(D), ` `,
     time(Time), ` `, digits(4, Y).
 
+%! decode(+Text, -Date) is semidet.
 decode(Text, http_date(Format, DateTime)) :-
     string_codes(Text, Codes),
     once(phrase(http_date(Format, DateTime), Codes)).
@@ -142,7 +143,7 @@ test(feb_29_century_not_leap, [fail]) :- decode("Thu, 29 Feb 1900 08:49:37 GMT",
 test(dayname_matches) :- decode("Sun, 06 Nov 1994 08:49:37 GMT", D), consistent_dayname(D).
 test(dayname_mismatch, [fail]) :- decode("Mon, 06 Nov 1994 08:49:37 GMT", D), consistent_dayname(D).
 test(leap_years, [forall(member(Y-Is, [1992-true, 1900-false, 2000-true, 1994-false]))]) :-
-    (leap_year(Y) -> Got = true; Got = false),
+    (leap_year(Y) -> Got = true ; Got = false),
     assertion(Got == Is).
 test(time_out_of_range,
     [forall(member(S, ["Sun, 06 Nov 1994 25:49:37 GMT",
@@ -162,11 +163,29 @@ test(rfc850_rejects_four_digit_year, [fail]) :-
 
 test(roundtrip, [forall(member(S, ["Sun, 06 Nov 1994 08:49:37 GMT",
                                    "Sunday, 06-Nov-94 08:49:37 GMT",
-                                   "Sun Nov  6 08:49:37 1994"]))]) :-
+                                   "Sun Nov  6 08:49:37 1994",
+                                   "Wed Nov 16 08:49:37 1994"]))]) :-
     decode(S, D), encode(D, S2), assertion(S2 == S).
+
+test(asctime_zero_padded_day_normalize) :-
+    decode("Sun Nov 06 08:49:37 1994", D),
+    encode(D, S),
+    assertion(S = "Sun Nov  6 08:49:37 1994").
 
 test(every_day_and_month, [forall((day(Day,_,_,_), month(M,_,_)))]) :-
     Date = http_date(imf_fixdate, datetime(Day, date(1994, M, 6), time(8,49,37))),
     encode(Date, S), decode(S, Back), assertion(Back == Date).
+
+test(strict_checks_dayname_for_imf) :-
+    strict_http_date(http_date(imf_fixdate, datetime(sun, date(1994,11,6), time(8,49,37)))).
+
+test(strict_rejects_wrong_dayname_for_imf, [fail]) :-
+    strict_http_date(http_date(imf_fixdate, datetime(mon, date(1994,11,6), time(8,49,27)))).
+
+test(strict_skips_dayname_for_rfc850_two_digit_year) :-
+    strict_http_date(http_date(rfc850, datetime(mon, date(94,11,6), time(8,49,37)))).
+
+test(long_dayname_not_imf, [fail]) :- decode("Sunday, 06 Nov 1994 08:49:37 GMT", _).
+test(short_dayname_not_rfc850, [fail]) :- decode("Sun, 06-Nov-94 08:49:37 GMT", _).
 
 :- end_tests(http_date).
