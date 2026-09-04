@@ -7,7 +7,8 @@
              valid_date/1,
              valid_time/1,
              valid_http_date/1,
-             valid_calendar_date/1,
+             consistent_dayname/1,
+             strict_http_date/1,
              http_date//2]).
 
 day(mon, 1, `Mon`, `Monday`).
@@ -33,13 +34,11 @@ month(12, `Dec`, 31).
 
 leap_year(Y) :-
     0 is Y mod 4,
-    ( 0 is Y mod 100 -> 0 is Y mod 400; true ).
+    ( 0 is Y mod 100 -> 0 is Y mod 400 ; true ).
 
 days_in_month(Y, M, N) :-
     month(M, _, N0),
-    ( M =:= 2, leap_year(Y) -> N is N0 + 1; N = N0 ).
-
-datetime_year(datetime(_, date(Y, _, _), _), Y).
+    ( M =:= 2, leap_year(Y) -> N is N0 + 1 ; N = N0 ).
 
 literal([]) --> [].
 literal([C|Cs]) --> [C], literal(Cs).
@@ -48,8 +47,6 @@ day_name(D, short) --> { day(D, _, Cs, _) }, literal(Cs).
 day_name(D, long)  --> { day(D, _, _, Cs) }, literal(Cs).
 
 month_name(M) --> { month(M, Cs, _) }, literal(Cs).
-
-gmt --> `GMT`.
 
 ndigits(0, []) --> [].
 ndigits(N, [C|Cs]) -->
@@ -83,8 +80,6 @@ http_date(asctime, datetime(Day, date(Y, M, D), Time)) -->
     day_name(Day, short), ` `, month_name(M), ` `, asctime_day(D), ` `,
     time(Time), ` `, digits(4, Y).
 
-http_date_datetime(http_date(_, DateTime), DateTime).
-
 decode(Text, http_date(Format, DateTime)) :-
     string_codes(Text, Codes),
     once(phrase(http_date(Format, DateTime), Codes)).
@@ -94,7 +89,7 @@ encode(http_date(Format, DateTime), Text) :-
     string_codes(Text, Codes).
 
 is_imf_fixdate(http_date(imf_fixdate, _)).
-is_rfc850(http_date(rfc850,_)).
+is_rfc850(http_date(rfc850, _)).
 is_asctime(http_date(asctime, _)).
 
 valid_date(date(Y, M, D)) :-
@@ -107,18 +102,18 @@ valid_time(time(H, Mi, S)) :-
     between(0, 59, Mi),
     between(0, 59, S).
 
-valid_http_date(http_date(_, datetime(_,Date, Time))) :-
+valid_http_date(http_date(_, datetime(_, Date, Time))) :-
     valid_date(Date),
     valid_time(Time).
 
-valid_dayname(http_date(_, datetime(Day, date(Y, M, D), _))) :-
+consistent_dayname(http_date(_, datetime(Day, date(Y, M, D), _))) :-
     day_of_the_week(date(Y, M, D), N),
     day(Day, N, _, _).
 
-valid_calendar_date(http_date(Format, DateTime)) :-
+strict_http_date(http_date(Format, DateTime)) :-
     valid_http_date(http_date(Format, DateTime)),
     ( Format == rfc850 -> true
-    ; valid_dayname(http_date(Format, DateTime))
+    ; consistent_dayname(http_date(Format, DateTime))
     ).
 
 :- begin_tests(http_date).
@@ -144,12 +139,23 @@ test(garbage, [fail]) :- decode("not a date", _).
 test(feb_31_rejected, [fail]) :- decode("Sun, 31 Feb 1994 08:49:37 GMT", D), valid_http_date(D).
 test(feb_29_leap) :- decode("Tue, 29 Feb 2000 08:49:37 GMT", D), valid_http_date(D).
 test(feb_29_century_not_leap, [fail]) :- decode("Thu, 29 Feb 1900 08:49:37 GMT", D), valid_http_date(D).
-test(dayname_matches) :- decode("Sun, 06 Nov 1994 08:49:37 GMT", D), valid_dayname(D).
-test(dayname_mismatch, [fail]) :- decode("Mon, 06 Nov 1994 08:49:37 GMT", D), valid_dayname(D).
-tset(leap_years, [forall(member(Y-Is, [1992-true, 1900-false, 2000-true, 1994-false]))]) :-
+test(dayname_matches) :- decode("Sun, 06 Nov 1994 08:49:37 GMT", D), consistent_dayname(D).
+test(dayname_mismatch, [fail]) :- decode("Mon, 06 Nov 1994 08:49:37 GMT", D), consistent_dayname(D).
+test(leap_years, [forall(member(Y-Is, [1992-true, 1900-false, 2000-true, 1994-false]))]) :-
     (leap_year(Y) -> Got = true; Got = false),
     assertion(Got == Is).
-test(hour_out_of_range, [fail]) :- decode("Sun, 06 Nov 1994 25:49:37 GMT", D), valid_http_date(D).
+test(time_out_of_range,
+    [forall(member(S, ["Sun, 06 Nov 1994 25:49:37 GMT",
+                       "Sun, 06 Nov 1994 08:99:37 GMT",
+                       "Sun, 06 Nov 1994 08:49:99 GMT"])),
+     fail]) :-
+        decode(S, D),
+        valid_http_date(D).
+test(time_out_of_range_still_parses,
+    [forall(member(S, ["Sun, 06 Nov 1994 25:49:37 GMT",
+                       "Sun, 06 Nov 1994 08:99:37 GMT",
+                       "Sun, 06 Nov 1994 08:49:99 GMT"]))]) :-
+     decode(S, _).
 
 test(rfc850_rejects_four_digit_year, [fail]) :-
     encode(http_date(rfc850, datetime(sun, date(1994,11,6), time(8,49,37))), _).
