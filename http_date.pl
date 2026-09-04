@@ -1,12 +1,13 @@
-:- module(http_date, 
+:- module(http_date,
             [decode/2,
-             encode/2, 
-             is_imf_fixdate/1, 
-             is_rfc850/1, 
+             encode/2,
+             is_imf_fixdate/1,
+             is_rfc850/1,
              is_asctime/1,
              valid_date/1,
              valid_time/1,
              valid_http_date/1,
+             valid_calendar_date/1,
              http_date//2]).
 
 day(mon, 1, `Mon`, `Monday`).
@@ -60,7 +61,7 @@ ndigits(N, [C|Cs]) -->
 digits(N, V) --> { var(V) }, !, ndigits(N, Cs), { number_codes(V, Cs) }.
 digits(N, V) --> { format(codes(Cs), '~|~`0t~d~*|', [V, N]) }, ndigits(N, Cs).
 
-time(time(H, Mi, S)) --> 
+time(time(H, Mi, S)) -->
     digits(2, H), `:`, digits(2, Mi), `:`, digits(2, S).
 
 asctime_day(D) --> ` `, digits(1, D), { D < 10 }.
@@ -73,7 +74,7 @@ date2(date(Y, M, D)) -->
     digits(2, D), `-`, month_name(M), `-`, digits(2, Y).
 
 http_date(imf_fixdate, datetime(Day, Date, Time)) -->
-    day_name(Day, short), `, `, date1(Date), ` `, time(Time), ` GMT`.    
+    day_name(Day, short), `, `, date1(Date), ` `, time(Time), ` GMT`.
 
 http_date(rfc850, datetime(Day, Date, Time)) -->
     day_name(Day, long), `, `, date2(Date), ` `, time(Time), ` GMT`.
@@ -110,9 +111,15 @@ valid_http_date(http_date(_, datetime(_,Date, Time))) :-
     valid_date(Date),
     valid_time(Time).
 
-consistent_dayname(http_date(_, datetime(Day, date(Y, M, D), _))) :-
+valid_dayname(http_date(_, datetime(Day, date(Y, M, D), _))) :-
     day_of_the_week(date(Y, M, D), N),
     day(Day, N, _, _).
+
+valid_calendar_date(http_date(Format, DateTime)) :-
+    valid_http_date(http_date(Format, DateTime)),
+    ( Format == rfc850 -> true
+    ; valid_dayname(http_date(Format, DateTime))
+    ).
 
 :- begin_tests(http_date).
 
@@ -134,7 +141,15 @@ test(asctime_two_digit) :-
 
 test(trailing_data, [fail]) :- decode("Sun, 06 Nov 1994 08:49:37 GMTx", _).
 test(garbage, [fail]) :- decode("not a date", _).
-% test(hour_out_of_range, [fail]) :- decode("Sun, 06 Nov 1994 25:49:37 GMT", _).
+test(feb_31_rejected, [fail]) :- decode("Sun, 31 Feb 1994 08:49:37 GMT", D), valid_http_date(D).
+test(feb_29_leap) :- decode("Tue, 29 Feb 2000 08:49:37 GMT", D), valid_http_date(D).
+test(feb_29_century_not_leap, [fail]) :- decode("Thu, 29 Feb 1900 08:49:37 GMT", D), valid_http_date(D).
+test(dayname_matches) :- decode("Sun, 06 Nov 1994 08:49:37 GMT", D), valid_dayname(D).
+test(dayname_mismatch, [fail]) :- decode("Mon, 06 Nov 1994 08:49:37 GMT", D), valid_dayname(D).
+tset(leap_years, [forall(member(Y-Is, [1992-true, 1900-false, 2000-true, 1994-false]))]) :-
+    (leap_year(Y) -> Got = true; Got = false),
+    assertion(Got == Is).
+test(hour_out_of_range, [fail]) :- decode("Sun, 06 Nov 1994 25:49:37 GMT", D), valid_http_date(D).
 
 test(rfc850_rejects_four_digit_year, [fail]) :-
     encode(http_date(rfc850, datetime(sun, date(1994,11,6), time(8,49,37))), _).
