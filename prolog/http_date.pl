@@ -181,7 +181,7 @@ test(roundtrip, [forall(member(S, ["Sun, 06 Nov 1994 08:49:37 GMT",
 test(asctime_zero_padded_day_normalize) :-
     decode("Sun Nov 06 08:49:37 1994", D),
     encode(D, S),
-    assertion(S = "Sun Nov  6 08:49:37 1994").
+    assertion(S == "Sun Nov  6 08:49:37 1994").
 
 test(every_day_and_month, [forall((day(Day,_,_,_), month(M,_,_)))]) :-
     Date = http_date(imf_fixdate, datetime(Day, date(1994, M, 6), time(8,49,37))),
@@ -191,10 +191,19 @@ test(strict_checks_dayname_for_imf) :-
     strict_http_date(http_date(imf_fixdate, datetime(sun, date(1994,11,6), time(8,49,37)))).
 
 test(strict_rejects_wrong_dayname_for_imf, [fail]) :-
-    strict_http_date(http_date(imf_fixdate, datetime(mon, date(1994,11,6), time(8,49,27)))).
+    strict_http_date(http_date(imf_fixdate, datetime(mon, date(1994,11,6), time(8,49,37)))).
 
 test(strict_skips_dayname_for_rfc850_two_digit_year) :-
     strict_http_date(http_date(rfc850, datetime(mon, date(94,11,6), time(8,49,37)))).
+
+test(stamp_epoch) :-
+    stamp_http_date(0, imf_fixdate, D),
+    assertion(D == http_date(imf_fixdate, datetime(thu, date(1970,1,1), time(0,0,0)))).
+
+test(stamp_from_known_date) :-
+    decode("Sun, 06 Nov 1994 08:49:37 GMT", D),
+    http_date_stamp(D, Stamp),
+    assertion(Stamp =:= 784111777.0).
 
 test(long_dayname_not_imf, [fail]) :- decode("Sunday, 06 Nov 1994 08:49:37 GMT", _).
 test(short_dayname_not_rfc850, [fail]) :- decode("Sun, 06-Nov-94 08:49:37 GMT", _).
