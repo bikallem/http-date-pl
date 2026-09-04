@@ -9,6 +9,8 @@
              valid_http_date/1,
              consistent_dayname/1,
              strict_http_date/1,
+             http_date_stamp/2,
+             stamp_http_date/3,
              http_date//2]).
 
 day(mon, 1, `Mon`, `Monday`).
@@ -117,6 +119,15 @@ strict_http_date(http_date(Format, DateTime)) :-
     ; consistent_dayname(http_date(Format, DateTime))
     ).
 
+http_date_stamp(http_date(_, datetime(_, date(Y, M, D), time(H, Mi, S))), Stamp) :-
+    date_time_stamp(date(Y, M, D, H, Mi, S, 0, -, -), Stamp).
+
+stamp_http_date(Stamp, Format, http_date(Format, datetime(Day, date(Y, M, D), time(H, Mi, S)))) :-
+    stamp_date_time(Stamp, date(Y, M, D, H, Mi, Sf, _, _, _), 0),
+    S is truncate(Sf),
+    day_of_the_week(date(Y, M, D), N),
+    day(Day, N, _, _).
+
 :- begin_tests(http_date).
 
 test(imf) :-
@@ -187,5 +198,19 @@ test(strict_skips_dayname_for_rfc850_two_digit_year) :-
 
 test(long_dayname_not_imf, [fail]) :- decode("Sunday, 06 Nov 1994 08:49:37 GMT", _).
 test(short_dayname_not_rfc850, [fail]) :- decode("Sun, 06-Nov-94 08:49:37 GMT", _).
+
+test(format_predicate_accepts_own_format,
+    [forall( member(Format-Check, [imf_fixdate-is_imf_fixdate,
+                                  rfc850-is_rfc850,
+                                  asctime-is_asctime]))]) :-
+    call(Check, http_date(Format, datetime(sun, date(1994,11,6), time(8,49,37)))).
+
+test(format_predicate_rejects_other_formats,
+[forall(( member(Format-Check, [imf_fixdate-is_imf_fixdate,
+                              rfc850-is_rfc850,
+                              asctime-is_asctime]),
+          member(Other, [imf_fixdate, rfc850, asctime]),
+          Other \== Format ))]) :-
+    \+ call(Check, http_date(Other, datetime(sun, date(1994,11,6), time(8,49,37)))).
 
 :- end_tests(http_date).
